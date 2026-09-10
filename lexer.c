@@ -14,10 +14,6 @@ void skipcomments(FILE *tape)
 		if (head == '\n')
 			Line++;
 
-		/*
-		 * \( and \) are part of the comment text,
-		 * so an escaped ')' must not end the comment.
-		 */
 		if (head == '\\') {
 			head = getc(tape);
 
@@ -30,7 +26,6 @@ void skipcomments(FILE *tape)
 			continue;
 		}
 
-		/* ')' without '\' ends the comment */
 		if (head == ')')
 			return;
 	}
@@ -96,10 +91,7 @@ int gettoken(FILE *source)
 {
 	int token;
 
-	/*
-	 * Ignore spaces and comments before looking
-	 * for the next actual token.
-	 */
+
 	while (1) {
 		skipspaces(source);
 
@@ -120,7 +112,6 @@ int gettoken(FILE *source)
 	if ( (token = isID(source)) ) return token;
 	if ( (token = isDEC(source)) ) return token;
 
-	// if neither pattern above was satisfied return the current ASCII to be read
 	token = getc(source);
 
 	return token;
