@@ -1,27 +1,24 @@
 #include <stdio.h>
-#include <tokens.h>
 #include <ctype.h>
+#include <tokens.h>
+#include <main.h>
+#include <parser.h>
 
-extern int gettoken(FILE *);
-
-FILE *source;
+FILE *source, *output;
 
 int main(void)
 {
-	int token;
+	// source = fopen(argv[1], "r");
 
-	while(1) {
-		token = gettoken(stdin);
-		if (token == EOF) {
-			printf("\n");
-			return 0;
-		}
-		if (isascii(token)) {
-			printf("%c ", token);
-		} else {
-			printf("%d ", token);
-		}
-	}
+	source = stdin;
+	output = stdout;
+
+	lookahead = gettoken(source);
+
+	E();
+	match(EOF);
+
+	printf("%lg\n", acc);
+
+	return 0;
 }
-
-
