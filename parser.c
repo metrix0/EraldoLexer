@@ -104,21 +104,21 @@ void E(void)
 	case DEC:
 		errno = 0;
 		acc = strtod(lexeme, NULL);
-		// TRATAMENTO DE ERRO: numero decimal fora do limite
+		// TRATAMENTO DE ERRO: decimal fora do limite
 		if (errno == ERANGE) erro("numero fora do limite");
 		match(DEC);
 		break;
 	case OCT:
 		errno = 0;
 		acc = strtol(lexeme, NULL, 8);
-		// TRATAMENTO DE ERRO: numero octal fora do limite
+		// TRATAMENTO DE ERRO: octal fora do limite
 		if (errno == ERANGE) erro("numero fora do limite");
 		match(OCT);
 		break;
 	case HEX:
 		errno = 0;
 		acc = strtol(lexeme, NULL, 16);
-		// TRATAMENTO DE ERRO: numero hexadecimal fora do limite
+		// TRATAMENTO DE ERRO: hexadecimal fora do limite
 		if (errno == ERANGE) erro("numero fora do limite");
 		match(HEX);
 		break;
@@ -128,7 +128,7 @@ void E(void)
 		match(')');
 		break;
 	default:
-		// TRATAMENTO DE ERRO: expressao ausente ou invalida
+		// TRATAMENTO DE ERRO: expressao incompleta
 		erro("expressao esperada");
 	}
 

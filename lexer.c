@@ -127,7 +127,7 @@ int isDEC(FILE *tape)
 			if (head != EOF) ungetc(head, tape);
 		} else {
 			int next = getc(tape);
-			// TRATAMENTO DE ERRO: digito octal invalido
+			// TRATAMENTO DE ERRO: digito invalido apos zero
 			if (next == '8' || next == '9') erro("digito invalido em numero octal");
 			if (next != EOF) ungetc(next, tape);
 		}
@@ -168,7 +168,7 @@ int gettoken(FILE *source)
 	} else {
 		snprintf(mensagem, sizeof mensagem, "caractere invalido (0x%02X)", token);
 	}
-	// TRATAMENTO DE ERRO: caractere invalido
+	// TRATAMENTO DE ERRO: caractere nao reconhecido
 	erro(mensagem);
 	return EOF;
 }
