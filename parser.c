@@ -1,8 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include <ctype.h>
 #include <string.h>
-#include <errno.h>
 #include <tokens.h>
 #include <lexer.h>
 #include <parser.h>
@@ -25,8 +23,6 @@ void push(void)
 }
 double pop(void)
 {
-	// TRATAMENTO DE ERRO: pilha vazia
-	if (sp < 0) erro("pilha vazia");
 	double aux = stack[sp];
 	sp--;
 	return aux;
@@ -102,24 +98,15 @@ void E(void)
 		}
 		break;
 	case DEC:
-		errno = 0;
 		acc = strtod(lexeme, NULL);
-		// TRATAMENTO DE ERRO: decimal fora do limite
-		if (errno == ERANGE) erro("numero fora do limite");
 		match(DEC);
 		break;
 	case OCT:
-		errno = 0;
 		acc = strtol(lexeme, NULL, 8);
-		// TRATAMENTO DE ERRO: octal fora do limite
-		if (errno == ERANGE) erro("numero fora do limite");
 		match(OCT);
 		break;
 	case HEX:
-		errno = 0;
 		acc = strtol(lexeme, NULL, 16);
-		// TRATAMENTO DE ERRO: hexadecimal fora do limite
-		if (errno == ERANGE) erro("numero fora do limite");
 		match(HEX);
 		break;
 	case '(':
@@ -174,32 +161,11 @@ void E(void)
 
 }
 
-static void mostra_token(int token)
-{
-	switch (token) {
-	case EOF: fprintf(stderr, "fim da entrada"); break;
-	case ID: fprintf(stderr, "identificador"); break;
-	case DEC: fprintf(stderr, "numero decimal"); break;
-	case OCT: fprintf(stderr, "numero octal"); break;
-	case HEX: fprintf(stderr, "numero hexadecimal"); break;
-	case ASGN: fprintf(stderr, "':='"); break;
-	default:
-		if (token >= 0 && token <= 255 && isprint(token))
-			fprintf(stderr, "'%c'", token);
-		else
-			fprintf(stderr, "token %d", token);
-	}
-}
-
 void match(int required)
 {
 	// TRATAMENTO DE ERRO: token inesperado
 	if (lookahead != required) {
-		fprintf(stderr, "Erro de sintaxe na linha %d: esperado ", line);
-		mostra_token(required);
-		fprintf(stderr, ", encontrado ");
-		mostra_token(lookahead);
-		fprintf(stderr, "\n");
+		fprintf(stderr, "Erro de sintaxe na linha %d\n", line);
 		exit(EXIT_FAILURE);
 	}
 	lookahead = gettoken(source);

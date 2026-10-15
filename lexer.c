@@ -56,8 +56,6 @@ int isOCT(FILE *tape)
 				append(head, &i);
 				head = getc(tape);
 			} while ('0' <= head && head <= '7');
-			// TRATAMENTO DE ERRO: digito octal invalido
-			if (head == '8' || head == '9') erro("digito invalido em numero octal");
 			if (head != EOF) ungetc(head, tape);
 			lexeme[i] = 0;
 			return OCT;
@@ -127,8 +125,6 @@ int isDEC(FILE *tape)
 			if (head != EOF) ungetc(head, tape);
 		} else {
 			int next = getc(tape);
-			// TRATAMENTO DE ERRO: digito invalido apos zero
-			if (next == '8' || next == '9') erro("digito invalido em numero octal");
 			if (next != EOF) ungetc(next, tape);
 		}
 		lexeme[i] = 0;
@@ -151,24 +147,5 @@ int gettoken(FILE *source)
 	if ( (token = isDEC(source)) ) return token;
 
 	token = getc(source);
-	if (token == EOF) {
-		// TRATAMENTO DE ERRO: falha de leitura
-		if (ferror(source)) erro("falha ao ler a entrada");
-		return EOF;
-	}
-	if (token == '+' || token == '-' || token == '*' || token == '/' ||
-	    token == '(' || token == ')') return token;
-
-	char mensagem[80];
-	if (token == ':') {
-		// TRATAMENTO DE ERRO: atribuicao incompleta
-		erro("esperado '=' depois de ':'");
-	} else if (isprint(token)) {
-		snprintf(mensagem, sizeof mensagem, "caractere invalido '%c'", token);
-	} else {
-		snprintf(mensagem, sizeof mensagem, "caractere invalido (0x%02X)", token);
-	}
-	// TRATAMENTO DE ERRO: caractere nao reconhecido
-	erro(mensagem);
-	return EOF;
+	return token;
 }
