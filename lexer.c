@@ -8,6 +8,7 @@ int line = 1;
 
 char lexeme[MAXSTRLEN+1];
 
+// TRATAMENTO DE ERRO: exibir erro e encerrar
 void erro(const char *mensagem)
 {
 	fprintf(stderr, "Erro na linha %d: %s\n", line, mensagem);
@@ -38,6 +39,7 @@ int isASGN(FILE *tape)
 
 void append(int c, int *i)
 {
+	// TRATAMENTO DE ERRO: token muito longo
 	if (*i == MAXSTRLEN) erro("token muito longo");
 	lexeme[(*i)++] = c;
 }
@@ -55,6 +57,7 @@ int isOCT(FILE *tape)
 				append(head, &i);
 				head = getc(tape);
 			} while ('0' <= head && head <= '7');
+			// TRATAMENTO DE ERRO: digito octal invalido
 			if (head == '8' || head == '9') erro("digito invalido em numero octal");
 			if (head != EOF) ungetc(head, tape);
 			lexeme[i] = 0;
@@ -86,6 +89,7 @@ int isHEX(FILE *tape)
 				lexeme[i] = 0;
 				return HEX;
 			}
+			// TRATAMENTO DE ERRO: hexadecimal incompleto
 			erro("numero hexadecimal incompleto");
 		}
 		if (next != EOF) ungetc(next, tape);
@@ -124,6 +128,7 @@ int isDEC(FILE *tape)
 			if (head != EOF) ungetc(head, tape);
 		} else {
 			int next = getc(tape);
+			// TRATAMENTO DE ERRO: digito invalido apos zero
 			if (next == '8' || next == '9') erro("digito invalido em numero octal");
 			if (next != EOF) ungetc(next, tape);
 		}
@@ -148,14 +153,17 @@ int gettoken(FILE *source)
 
 	token = getc(source);
 	if (token == EOF) {
+		// TRATAMENTO DE ERRO: falha de leitura
 		if (ferror(source)) erro("falha ao ler a entrada");
 		return EOF;
 	}
 	if (token == '+' || token == '-' || token == '*' || token == '/' ||
 	    token == '(' || token == ')') return token;
 
+	// TRATAMENTO DE ERRO: caractere nao reconhecido
 	char mensagem[80];
 	if (token == ':') {
+		// TRATAMENTO DE ERRO: atribuicao incompleta
 		erro("esperado '=' depois de ':'");
 	} else if (isprint(token)) {
 		snprintf(mensagem, sizeof mensagem, "caractere invalido '%c'", token);

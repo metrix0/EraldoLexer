@@ -9,6 +9,7 @@ FILE *source, *output;
 
 int main(int argc, char **argv)
 {
+	// TRATAMENTO DE ERRO: quantidade de argumentos
 	if (argc > 2) {
 		fprintf(stderr, "Uso: %s [arquivo]\n", argv[0]);
 		return EXIT_FAILURE;
@@ -17,6 +18,7 @@ int main(int argc, char **argv)
 	source = stdin;
 	if (argc == 2) {
 		source = fopen(argv[1], "r");
+		// TRATAMENTO DE ERRO: falha ao abrir arquivo
 		if (source == NULL) {
 			perror(argv[1]);
 			return EXIT_FAILURE;

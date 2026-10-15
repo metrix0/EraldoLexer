@@ -22,12 +22,14 @@ double stack[MAXSTACKSIZE];
 int sp = -1;
 void push(void)
 {
+	// TRATAMENTO DE ERRO: pilha cheia
 	if (sp == MAXSTACKSIZE - 1) erro("pilha cheia");
 	sp++;
 	stack[sp] = acc;
 }
 double pop(void)
 {
+	// TRATAMENTO DE ERRO: pilha vazia
 	if (sp < 0) erro("pilha vazia");
 	double aux = stack[sp];
 	sp--;
@@ -52,6 +54,7 @@ void store(char *name, double value)
 {
 	int i = lookup(name);
 	if (i == -1) {
+		// TRATAMENTO DE ERRO: tabela de simbolos cheia
 		if (symcount == SYMTABSIZE) erro("tabela de simbolos cheia");
 		i = symcount++;
 		strcpy(symtab[i], name);
@@ -62,6 +65,7 @@ void store(char *name, double value)
 double recall(char *name)
 {
 	int i = lookup(name);
+	// TRATAMENTO DE ERRO: variavel nao definida
 	if (i == -1) {
 		char mensagem[MAXSTRLEN + 40];
 		snprintf(mensagem, sizeof mensagem, "variavel '%s' nao definida", name);
@@ -105,18 +109,21 @@ void E(void)
 		}
 		break;
 	case DEC:
+		// TRATAMENTO DE ERRO: decimal fora do limite
 		errno = 0;
 		acc = strtod(lexeme, NULL);
 		if (errno == ERANGE) erro("numero fora do limite");
 		match(DEC);
 		break;
 	case OCT:
+		// TRATAMENTO DE ERRO: octal fora do limite
 		errno = 0;
 		acc = strtol(lexeme, NULL, 8);
 		if (errno == ERANGE) erro("numero fora do limite");
 		match(OCT);
 		break;
 	case HEX:
+		// TRATAMENTO DE ERRO: hexadecimal fora do limite
 		errno = 0;
 		acc = strtol(lexeme, NULL, 16);
 		if (errno == ERANGE) erro("numero fora do limite");
@@ -128,6 +135,7 @@ void E(void)
 		match(')');
 		break;
 	default:
+		// TRATAMENTO DE ERRO: expressao incompleta
 		erro("expressao esperada");
 	}
 
@@ -135,6 +143,7 @@ void E(void)
 		if (otimesflg == '*') {
 			acc = pop() * acc;
 		} else {
+			// TRATAMENTO DE ERRO: divisao por zero
 			if (acc == 0) erro("divisao por zero");
 			acc = pop() / acc;
 		}
@@ -247,6 +256,7 @@ static void mostra_token(int token)
 
 void match(int required)
 {
+	// TRATAMENTO DE ERRO: token inesperado
 	if (lookahead != required) {
 		fprintf(stderr, "Erro de sintaxe na linha %d: esperado ", line);
 		mostra_token(required);
