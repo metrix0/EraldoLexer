@@ -5,7 +5,7 @@ EXEC = mybc
 $(EXEC): main.o lexer.o parser.o
 	$(CC) -o $@ $^
 
-# Limpeza dos arquivos gerados
+# depolution targets:
 
 clean:
 	$(RM) *.o

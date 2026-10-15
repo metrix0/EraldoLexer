@@ -5,10 +5,11 @@
 #include <lexer.h>
 #include <parser.h>
 
-// Proximo token a ser analisado
+// lookahead is the compiler's eye which is traditionally defined here
 int lookahead;
 
-// Acumulador usado nas operacoes
+// virtual machine definition
+// accumulator:
 double acc = 0;
 
 #define MAXSTACKSIZE 1024
@@ -69,14 +70,14 @@ double recall(char *name)
 void E(void)
 {
 	char name[MAXSTRLEN+1];
-	// Verifica se a expressao comeca com sinal negativo
+	// check prefixing signal
 	int sigflag = 0;
 	int otimesflg = 0;
 	int oplusflg = 0;
 
 	if (lookahead == '+' || lookahead == '-') {
 		if (lookahead == '-') {
-			sigflag = 1;
+			sigflag = 1; // signal seen
 		}
 		match(lookahead);
 	}
@@ -86,14 +87,14 @@ void E(void)
 	switch (lookahead) {
 	case ID:
 		strcpy(name, lexeme);
-		match(ID);
+		match(ID); // ID is associated to a R-value or L-value variable
 		if (lookahead == ASGN) {
-			// Atribuicao: guarda o resultado na variavel
+			// ID := E -> L-value
 			match(ASGN);
 			E();
 			store(name, acc);
 		} else {
-			// Consulta o valor da variavel
+			// R-value
 			acc = recall(name);
 		}
 		break;
@@ -137,10 +138,10 @@ void E(void)
 		goto _F;
 	}
 
-	// Fim do termo
+	// term ends
 	if (sigflag) {
 		acc = -acc;
-		sigflag = 0;
+		sigflag = 0; // turn off sigflag
 	}
 
 	if (oplusflg) {

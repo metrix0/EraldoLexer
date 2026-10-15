@@ -23,7 +23,6 @@ void skipspaces(FILE *tape)
 	if (c != EOF) ungetc(c, tape);
 }
 
-// ASGN = ':='
 int isASGN(FILE *tape)
 {
 	int head = getc(tape);
@@ -95,9 +94,11 @@ int isHEX(FILE *tape)
 	return 0;
 }
 
-// ID = [A-Za-z][A-Za-z0-9]*
 int isID(FILE *tape)
 {
+	/* 
+	   ID = [A-Za-z][A-Za-z0-9]*
+	*/
 	int head = getc(tape);
 
 	if (isalpha(head)) {
@@ -117,9 +118,11 @@ int isID(FILE *tape)
 	return 0;
 }
 
-// DEC = '0' | [1-9][0-9]*
 int isDEC(FILE *tape)
 {
+	/*
+	  DEC = '0' | [1-9][0-9]*
+	*/
 	int head = getc(tape);
 
 	if (isdigit(head)) {
@@ -156,6 +159,7 @@ int gettoken(FILE *source)
 	if ( (token = isHEX(source)) ) return token;
 	if ( (token = isDEC(source)) ) return token;
 
+	// if neither pattern above was satisfied return the current ASCII to be read
 	token = getc(source);
 	return token;
 }

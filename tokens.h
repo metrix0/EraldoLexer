@@ -5,5 +5,5 @@ enum {
 	DEC,
 	OCT,
 	HEX,
-	ASGN, // operador de atribuicao
+	ASGN, // := right-associative assignment operator
 };
