@@ -99,16 +99,20 @@ int isHEX(FILE *tape)
 int isID(FILE *tape)
 {
 	int head = getc(tape);
+
 	if (isalpha(head)) {
-		int i = 0;
-		do {
-			append(head, &i);
-			head = getc(tape);
-		} while (isalnum(head));
+		lexeme[0] = head;
+		int i = 1;
+		while (isalnum(head = getc(tape))) {
+			// TRATAMENTO DE ERRO: token muito longo
+			if (i == MAXSTRLEN) erro("token muito longo");
+			lexeme[i++] = head;
+		}
 		if (head != EOF) ungetc(head, tape);
 		lexeme[i] = 0;
 		return ID;
 	}
+
 	if (head != EOF) ungetc(head, tape);
 	return 0;
 }
@@ -117,19 +121,25 @@ int isID(FILE *tape)
 int isDEC(FILE *tape)
 {
 	int head = getc(tape);
+
 	if (isdigit(head)) {
-		int i = 0;
-		append(head, &i);
-		if (head != '0') {
-			while (isdigit(head = getc(tape))) append(head, &i);
-			if (head != EOF) ungetc(head, tape);
-		} else {
-			int next = getc(tape);
-			if (next != EOF) ungetc(next, tape);
+		lexeme[0] = head;
+		if (head == '0') {
+			lexeme[1] = 0;
+			return DEC;
 		}
+
+		int i = 1;
+		while (isdigit(head = getc(tape))) {
+			// TRATAMENTO DE ERRO: token muito longo
+			if (i == MAXSTRLEN) erro("token muito longo");
+			lexeme[i++] = head;
+		}
+		if (head != EOF) ungetc(head, tape);
 		lexeme[i] = 0;
 		return DEC;
 	}
+
 	if (head != EOF) ungetc(head, tape);
 	return 0;
 }
