@@ -8,13 +8,19 @@ int line = 1;
 
 char lexeme[MAXSTRLEN+1];
 
+void erro(const char *mensagem)
+{
+	fprintf(stderr, "Erro na linha %d: %s\n", line, mensagem);
+	exit(EXIT_FAILURE);
+}
+
 void skipspaces(FILE *tape)
 {
 	int c;
 	while(isspace(c = getc(tape)) ) {
 		if (c == '\n') line++;
 	}
-	ungetc(c, tape);
+	if (c != EOF) ungetc(c, tape);
 }
 
 // ASGN = ':='
@@ -24,18 +30,15 @@ int isASGN(FILE *tape)
 	if (head == ':') {
 		int next = getc(tape);
 		if (next == '=') return ASGN;
-		ungetc(next, tape);
+		if (next != EOF) ungetc(next, tape);
 	}
-	ungetc(head, tape);
+	if (head != EOF) ungetc(head, tape);
 	return 0;
 }
 
 void append(int c, int *i)
 {
-	if (*i == MAXSTRLEN) {
-		fprintf(stderr, "token too long at line %d\n", line);
-		exit(-2);
-	}
+	if (*i == MAXSTRLEN) erro("token muito longo");
 	lexeme[(*i)++] = c;
 }
 
@@ -52,13 +55,14 @@ int isOCT(FILE *tape)
 				append(head, &i);
 				head = getc(tape);
 			} while ('0' <= head && head <= '7');
-			ungetc(head, tape);
+			if (head == '8' || head == '9') erro("digito invalido em numero octal");
+			if (head != EOF) ungetc(head, tape);
 			lexeme[i] = 0;
 			return OCT;
 		}
-		ungetc(head, tape);
+		if (head != EOF) ungetc(head, tape);
 	}
-	ungetc(prefix, tape);
+	if (prefix != EOF) ungetc(prefix, tape);
 	return 0;
 }
 
@@ -78,15 +82,15 @@ int isHEX(FILE *tape)
 					append(head, &i);
 					head = getc(tape);
 				} while (isxdigit(head));
-				ungetc(head, tape);
+				if (head != EOF) ungetc(head, tape);
 				lexeme[i] = 0;
 				return HEX;
 			}
-			ungetc(head, tape);
+			erro("numero hexadecimal incompleto");
 		}
-		ungetc(next, tape);
+		if (next != EOF) ungetc(next, tape);
 	}
-	ungetc(prefix, tape);
+	if (prefix != EOF) ungetc(prefix, tape);
 	return 0;
 }
 
@@ -100,11 +104,11 @@ int isID(FILE *tape)
 			append(head, &i);
 			head = getc(tape);
 		} while (isalnum(head));
-		ungetc(head, tape);
+		if (head != EOF) ungetc(head, tape);
 		lexeme[i] = 0;
 		return ID;
 	}
-	ungetc(head, tape);
+	if (head != EOF) ungetc(head, tape);
 	return 0;
 }
 
@@ -117,12 +121,16 @@ int isDEC(FILE *tape)
 		append(head, &i);
 		if (head != '0') {
 			while (isdigit(head = getc(tape))) append(head, &i);
-			ungetc(head, tape);
+			if (head != EOF) ungetc(head, tape);
+		} else {
+			int next = getc(tape);
+			if (next == '8' || next == '9') erro("digito invalido em numero octal");
+			if (next != EOF) ungetc(next, tape);
 		}
 		lexeme[i] = 0;
 		return DEC;
 	}
-	ungetc(head, tape);
+	if (head != EOF) ungetc(head, tape);
 	return 0;
 }
 
@@ -138,8 +146,22 @@ int gettoken(FILE *source)
 	if ( (token = isHEX(source)) ) return token;
 	if ( (token = isDEC(source)) ) return token;
 
-	// if neither pattern above was satisfied return the current ASCII to be read
 	token = getc(source);
+	if (token == EOF) {
+		if (ferror(source)) erro("falha ao ler a entrada");
+		return EOF;
+	}
+	if (token == '+' || token == '-' || token == '*' || token == '/' ||
+	    token == '(' || token == ')') return token;
 
-	return token;
+	char mensagem[80];
+	if (token == ':') {
+		erro("esperado '=' depois de ':'");
+	} else if (isprint(token)) {
+		snprintf(mensagem, sizeof mensagem, "caractere invalido '%c'", token);
+	} else {
+		snprintf(mensagem, sizeof mensagem, "caractere invalido (0x%02X)", token);
+	}
+	erro(mensagem);
+	return EOF;
 }

@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <ctype.h>
 #include <string.h>
+#include <errno.h>
 #include <tokens.h>
 #include <lexer.h>
 #include <parser.h>
@@ -21,15 +22,13 @@ double stack[MAXSTACKSIZE];
 int sp = -1;
 void push(void)
 {
-	if (sp == MAXSTACKSIZE - 1) {
-		fprintf(stderr, "stack full at line %d\n", line);
-		exit(-2);
-	}
+	if (sp == MAXSTACKSIZE - 1) erro("pilha cheia");
 	sp++;
 	stack[sp] = acc;
 }
 double pop(void)
 {
+	if (sp < 0) erro("pilha vazia");
 	double aux = stack[sp];
 	sp--;
 	return aux;
@@ -53,10 +52,7 @@ void store(char *name, double value)
 {
 	int i = lookup(name);
 	if (i == -1) {
-		if (symcount == SYMTABSIZE) {
-			fprintf(stderr, "symbol table full\n");
-			exit(-2);
-		}
+		if (symcount == SYMTABSIZE) erro("tabela de simbolos cheia");
 		i = symcount++;
 		strcpy(symtab[i], name);
 	}
@@ -67,8 +63,9 @@ double recall(char *name)
 {
 	int i = lookup(name);
 	if (i == -1) {
-		fprintf(stderr, "undefined variable: %s at line %d\n", name, line);
-		exit(-2);
+		char mensagem[MAXSTRLEN + 40];
+		snprintf(mensagem, sizeof mensagem, "variavel '%s' nao definida", name);
+		erro(mensagem);
 	}
 	return vmem[i];
 }
@@ -108,31 +105,37 @@ void E(void)
 		}
 		break;
 	case DEC:
+		errno = 0;
 		acc = strtod(lexeme, NULL);
+		if (errno == ERANGE) erro("numero fora do limite");
 		match(DEC);
 		break;
 	case OCT:
+		errno = 0;
 		acc = strtol(lexeme, NULL, 8);
+		if (errno == ERANGE) erro("numero fora do limite");
 		match(OCT);
 		break;
 	case HEX:
+		errno = 0;
 		acc = strtol(lexeme, NULL, 16);
+		if (errno == ERANGE) erro("numero fora do limite");
 		match(HEX);
 		break;
-	default:
+	case '(':
 		match('(');
 		E();
 		match(')');
+		break;
+	default:
+		erro("expressao esperada");
 	}
 
 	if (otimesflg) {
 		if (otimesflg == '*') {
 			acc = pop() * acc;
 		} else {
-			if (acc == 0) {
-				fprintf(stderr, "division by zero at line %d\n", line);
-				exit(-2);
-			}
+			if (acc == 0) erro("divisao por zero");
 			acc = pop() / acc;
 		}
 		otimesflg = 0;
@@ -225,31 +228,32 @@ F(void)
 }
 */
 
-void
-match(int required)
+static void mostra_token(int token)
 {
-	if (lookahead == required) {
-		lookahead = gettoken(source);
-	} else {
-		if (isprint(lookahead)) {
-			fprintf(stderr,
-					"token mismatch: %c while expected %c\nexiting with err\n",
-					lookahead, required);
-		} else {
-			if (lookahead == EOF) {
-				fprintf(stderr, "premature EOF seen at line %d\n", line);
-			} else {
-				if (isprint(lookahead)) {
-					fprintf(stderr,
-							"token mismatch: %c while expected %c at line %d\nexiting with err\n",
-							lookahead, required, line);
-				} else {
-					fprintf(stderr,
-							"token mismatch: %d while expected %d at line %d\nexiting with err\n",
-							lookahead, required, line);
-				}
-			}
-		}
-		exit(-2);
+	switch (token) {
+	case EOF: fprintf(stderr, "fim da entrada"); break;
+	case ID: fprintf(stderr, "identificador"); break;
+	case DEC: fprintf(stderr, "numero decimal"); break;
+	case OCT: fprintf(stderr, "numero octal"); break;
+	case HEX: fprintf(stderr, "numero hexadecimal"); break;
+	case ASGN: fprintf(stderr, "':='"); break;
+	default:
+		if (token >= 0 && token <= 255 && isprint(token))
+			fprintf(stderr, "'%c'", token);
+		else
+			fprintf(stderr, "token %d", token);
 	}
+}
+
+void match(int required)
+{
+	if (lookahead != required) {
+		fprintf(stderr, "Erro de sintaxe na linha %d: esperado ", line);
+		mostra_token(required);
+		fprintf(stderr, ", encontrado ");
+		mostra_token(lookahead);
+		fprintf(stderr, "\n");
+		exit(EXIT_FAILURE);
+	}
+	lookahead = gettoken(source);
 }
