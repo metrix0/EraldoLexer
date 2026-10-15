@@ -123,9 +123,6 @@ int isDEC(FILE *tape)
 		if (head != '0') {
 			while (isdigit(head = getc(tape))) append(head, &i);
 			if (head != EOF) ungetc(head, tape);
-		} else {
-			int next = getc(tape);
-			if (next != EOF) ungetc(next, tape);
 		}
 		lexeme[i] = 0;
 		return DEC;
