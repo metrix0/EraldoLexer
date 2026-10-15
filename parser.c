@@ -1,5 +1,3 @@
-// <parser.c>::
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <ctype.h>
@@ -9,12 +7,10 @@
 #include <lexer.h>
 #include <parser.h>
 
-// lookahead is the compiler's eye which is traditionally defined here
-int             lookahead;
-extern char lexeme[];// stores the token string content
+// Proximo token a ser analisado
+int lookahead;
 
-// virtual machine definition
-// accumulator:
+// Acumulador usado nas operacoes
 double acc = 0;
 
 #define MAXSTACKSIZE 1024
@@ -77,55 +73,52 @@ double recall(char *name)
 void E(void)
 {
 	char name[MAXSTRLEN+1];
-	// check prefixing signal
+	// Verifica se a expressao comeca com sinal negativo
 	int sigflag = 0;
 	int otimesflg = 0;
 	int oplusflg = 0;
 
 	if (lookahead == '+' || lookahead == '-') {
 		if (lookahead == '-') {
-			sigflag = 1; // signal seen
+			sigflag = 1;
 		}
 		match(lookahead);
 	}
 
   _T:
-	// T();
   _F:
-	// F();
 	switch (lookahead) {
 	case ID:
-		// fprintf(output, " %s", lexeme);
 		strcpy(name, lexeme);
-		match(ID); // ID is associated to a R-value or L-value variable
+		match(ID);
 		if (lookahead == ASGN) {
-			// ID := E -> L-value
+			// Atribuicao: guarda o resultado na variavel
 			match(ASGN);
 			E();
 			store(name, acc);
 		} else {
-			// R-value
+			// Consulta o valor da variavel
 			acc = recall(name);
 		}
 		break;
 	case DEC:
-		// TRATAMENTO DE ERRO: decimal fora do limite
 		errno = 0;
 		acc = strtod(lexeme, NULL);
+		// TRATAMENTO DE ERRO: numero decimal fora do limite
 		if (errno == ERANGE) erro("numero fora do limite");
 		match(DEC);
 		break;
 	case OCT:
-		// TRATAMENTO DE ERRO: octal fora do limite
 		errno = 0;
 		acc = strtol(lexeme, NULL, 8);
+		// TRATAMENTO DE ERRO: numero octal fora do limite
 		if (errno == ERANGE) erro("numero fora do limite");
 		match(OCT);
 		break;
 	case HEX:
-		// TRATAMENTO DE ERRO: hexadecimal fora do limite
 		errno = 0;
 		acc = strtol(lexeme, NULL, 16);
+		// TRATAMENTO DE ERRO: numero hexadecimal fora do limite
 		if (errno == ERANGE) erro("numero fora do limite");
 		match(HEX);
 		break;
@@ -135,7 +128,7 @@ void E(void)
 		match(')');
 		break;
 	default:
-		// TRATAMENTO DE ERRO: expressao incompleta
+		// TRATAMENTO DE ERRO: expressao ausente ou invalida
 		erro("expressao esperada");
 	}
 
@@ -157,14 +150,13 @@ void E(void)
 		goto _F;
 	}
 
-	// term ends
+	// Fim do termo
 	if (sigflag) {
 		acc = -acc;
-		sigflag = 0; // turn off sigflag
+		sigflag = 0;
 	}
 
 	if (oplusflg) {
-		// fprintf(output, " %c", oplusflg);
 		if (oplusflg == '+') {
 			acc = acc + pop();
 		} else {
@@ -181,61 +173,6 @@ void E(void)
 	}
 
 }
-
-/*
-void
-T(void)
-{
-  _F:
-	// F();
-	switch (lookahead) {
-	case ID:
-		match(ID);
-		break;
-	case DEC:
-		match(DEC);
-		break;
-	case OCT:
-		match(OCT);
-		break;
-	case HEX:
-		match(HEX);
-		break;
-	default:
-		match('(');
-		E();
-		match(')');
-	}
-
-	if (lookahead == '*' || lookahead == '/') {
-		match(lookahead);
-		goto _F;
-	}
-}
-
-void
-F(void)
-{
-	switch (lookahead) {
-	case ID:
-		match(ID);
-		break;
-	case DEC:
-		match(DEC);
-		break;
-	case OCT:
-		match(OCT);
-		break;
-	case HEX:
-		match(HEX);
-		break;
-	default:
-		match('(');
-		E();
-		match(')');
-	}
-}
-*/
 
 static void mostra_token(int token)
 {

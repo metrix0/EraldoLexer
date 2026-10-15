@@ -8,7 +8,6 @@ int line = 1;
 
 char lexeme[MAXSTRLEN+1];
 
-// TRATAMENTO DE ERRO: exibir erro e encerrar
 void erro(const char *mensagem)
 {
 	fprintf(stderr, "Erro na linha %d: %s\n", line, mensagem);
@@ -128,7 +127,7 @@ int isDEC(FILE *tape)
 			if (head != EOF) ungetc(head, tape);
 		} else {
 			int next = getc(tape);
-			// TRATAMENTO DE ERRO: digito invalido apos zero
+			// TRATAMENTO DE ERRO: digito octal invalido
 			if (next == '8' || next == '9') erro("digito invalido em numero octal");
 			if (next != EOF) ungetc(next, tape);
 		}
@@ -160,7 +159,6 @@ int gettoken(FILE *source)
 	if (token == '+' || token == '-' || token == '*' || token == '/' ||
 	    token == '(' || token == ')') return token;
 
-	// TRATAMENTO DE ERRO: caractere nao reconhecido
 	char mensagem[80];
 	if (token == ':') {
 		// TRATAMENTO DE ERRO: atribuicao incompleta
@@ -170,6 +168,7 @@ int gettoken(FILE *source)
 	} else {
 		snprintf(mensagem, sizeof mensagem, "caractere invalido (0x%02X)", token);
 	}
+	// TRATAMENTO DE ERRO: caractere invalido
 	erro(mensagem);
 	return EOF;
 }
