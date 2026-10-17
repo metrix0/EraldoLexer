@@ -1,3 +1,4 @@
+/* tokens.h - Tokens compostos; os simbolos simples usam seu codigo ASCII. */
 #pragma once
 
 enum {

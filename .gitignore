@@ -1,0 +1,4 @@
+# Arquivos gerados pela compilacao e backups do editor.
+*.o
+/mybc
+*~

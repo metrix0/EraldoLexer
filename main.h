@@ -1,6 +1,6 @@
+/* main.h - Declaracoes compartilhadas com o programa principal. */
 #pragma once
 
-extern int gettoken(FILE *);
-extern void E(void);
-extern int lookahead;
-extern double acc;
+#include <lexer.h>
+#include <parser.h>
+#include <vmachine.h>

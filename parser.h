@@ -1,9 +1,14 @@
+/* parser.h - Interface da analise e da recuperacao por linha. */
 #pragma once
+#include <stdio.h>
+#include <setjmp.h>
 
-extern FILE *source; // to be defined at main.c
-
+extern FILE *source; /* Entrada definida em main.c. */
 extern int lookahead;
-extern void E(void);
-extern void match(int required);
-extern int line;
-extern int gettoken(FILE *); // defined at lexer.c
+extern jmp_buf recovery;
+
+void E(void);
+void match(int required);
+void nexttoken(void);
+void expected(const char *description);
+void recover(void);

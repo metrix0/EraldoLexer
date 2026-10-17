@@ -1,28 +1,34 @@
+/*
+ * lexer.c - Reconhece identificadores, inteiros e atribuicao.
+ * Os reconhecedores devolvem os caracteres que nao pertencem ao token.
+ */
 #include <stdio.h>
 #include <ctype.h>
-#include <stdlib.h>
+#include <parser.h>
 #include <tokens.h>
 #include <lexer.h>
 
 int line = 1;
+int tokenline = 1;
 
 char lexeme[MAXSTRLEN+1];
 
+/* Um unico diagnostico por linha; a continuacao e feita pelo main. */
 void erro(const char *mensagem)
 {
-	fprintf(stderr, "Erro na linha %d: %s\n", line, mensagem);
-	exit(EXIT_FAILURE);
+	fprintf(stderr, "Erro na linha %d: %s\n", tokenline, mensagem);
+	longjmp(recovery, 1);
 }
 
+/* Ignora espacos horizontais; a quebra de linha delimita uma expressao. */
 void skipspaces(FILE *tape)
 {
 	int c;
-	while(isspace(c = getc(tape)) ) {
-		if (c == '\n') line++;
-	}
+	while ((c = getc(tape)) != '\n' && isspace(c));
 	if (c != EOF) ungetc(c, tape);
 }
 
+/* ASGN = ':='; dois caracteres formam um unico token. */
 int isASGN(FILE *tape)
 {
 	int head = getc(tape);
@@ -35,9 +41,10 @@ int isASGN(FILE *tape)
 	return 0;
 }
 
+/* Reserva o ultimo byte para o terminador do lexema. */
 void append(int c, int *i)
 {
-	// TRATAMENTO DE ERRO: token muito longo
+	/* Impede escrita alem do limite do lexema. */
 	if (*i == MAXSTRLEN) erro("token muito longo");
 	lexeme[(*i)++] = c;
 }
@@ -85,7 +92,8 @@ int isHEX(FILE *tape)
 				lexeme[i] = 0;
 				return HEX;
 			}
-			// TRATAMENTO DE ERRO: hexadecimal incompleto
+			/* Preserva o separador para a recuperacao nao pular a proxima linha. */
+			if (head != EOF) ungetc(head, tape);
 			erro("numero hexadecimal incompleto");
 		}
 		if (next != EOF) ungetc(next, tape);
@@ -105,7 +113,7 @@ int isID(FILE *tape)
 		lexeme[0] = head;
 		int i = 1;
 		while (isalnum(head = getc(tape))) {
-			// TRATAMENTO DE ERRO: token muito longo
+			/* Impede escrita alem do limite do lexema. */
 			if (i == MAXSTRLEN) erro("token muito longo");
 			lexeme[i++] = head;
 		}
@@ -134,7 +142,7 @@ int isDEC(FILE *tape)
 
 		int i = 1;
 		while (isdigit(head = getc(tape))) {
-			// TRATAMENTO DE ERRO: token muito longo
+			/* Impede escrita alem do limite do lexema. */
 			if (i == MAXSTRLEN) erro("token muito longo");
 			lexeme[i++] = head;
 		}
@@ -147,11 +155,13 @@ int isDEC(FILE *tape)
 	return 0;
 }
 
+/* A ordem dos reconhecedores distingue octais e hexadecimais de zero. */
 int gettoken(FILE *source)
 {
 	int token;
 
 	skipspaces(source);
+	tokenline = line;
 
 	if ( (token = isASGN(source)) ) return token;
 	if ( (token = isID(source)) ) return token;
@@ -159,7 +169,8 @@ int gettoken(FILE *source)
 	if ( (token = isHEX(source)) ) return token;
 	if ( (token = isDEC(source)) ) return token;
 
-	// if neither pattern above was satisfied return the current ASCII to be read
+	/* Operadores e parenteses usam seu proprio codigo de caractere. */
 	token = getc(source);
+	if (token == '\n') line++;
 	return token;
 }
