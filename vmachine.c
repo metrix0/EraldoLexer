@@ -1,4 +1,4 @@
-/* vmachine.c - Maquina virtual simples, com um acumulador e uma pilha. */
+// AULA 7: Acumulador e pilha de operandos.
 #include <lexer.h>
 #include <vmachine.h>
 
@@ -8,7 +8,7 @@ double acc = 0;
 static double stack[MAXSTACKSIZE];
 static int sp = -1;
 
-/* A pilha preserva operandos enquanto o parser calcula subexpressoes. */
+// AULA 7: Guarda o valor enquanto o proximo operando e calculado.
 void push(void)
 {
 	if (sp == MAXSTACKSIZE - 1) erro("pilha cheia");
@@ -24,6 +24,7 @@ double pop(void)
 	return aux;
 }
 
+// AULA 7: Limpa os temporarios, sem apagar as variaveis.
 void resetvm(void)
 {
 	acc = 0;

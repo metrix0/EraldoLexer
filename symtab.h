@@ -1,8 +1,8 @@
-/* symtab.h - Armazenamento e consulta das variaveis do MyBC. */
+// AULA 7: Consulta e atribuicao de variaveis.
 #pragma once
 
-/* Cria a variavel se necessario; uma nova atribuicao substitui seu valor. */
+// AULA 7: Cria a variavel ou atualiza seu valor.
 void store(char *name, double value);
 
-/* Consulta o valor, informando erro quando o nome ainda nao foi definido. */
+// AULA 7: Avisa se a variavel ainda nao existe.
 double recall(char *name);

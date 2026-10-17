@@ -1,4 +1,4 @@
-/* tokens.h - Tokens compostos; os simbolos simples usam seu codigo ASCII. */
+// AULA 7: Codigos dos tokens.
 #pragma once
 
 enum {
@@ -6,5 +6,5 @@ enum {
 	DEC,
 	OCT,
 	HEX,
-	ASGN, // := right-associative assignment operator
+	ASGN,
 };

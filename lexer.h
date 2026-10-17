@@ -1,15 +1,15 @@
-/* lexer.h - Tokens, lexemas e posicao da leitura na entrada. */
+// AULA 7: Lexemas e controle de linha.
 #pragma once
 #include <stdio.h>
 
 #define MAXSTRLEN 256
 
 extern char lexeme[];
-extern int line;       /* Linha da proxima leitura do arquivo. */
-extern int tokenline;  /* Linha de origem do token corrente. */
+extern int line;
+extern int tokenline;
 
-/* Retorna o token, '\n' como separador de expressoes, ou EOF. */
+// AULA 7: Devolve um token, quebra de linha ou EOF.
 int gettoken(FILE *source);
 
-/* Reporta o erro e retorna ao ponto de recuperacao instalado pelo main. */
+// AULA 7: Avisa o erro e interrompe a expressao atual.
 void erro(const char *mensagem);

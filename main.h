@@ -1,4 +1,4 @@
-/* main.h - Declaracoes compartilhadas com o programa principal. */
+// AULA 7: Declaracoes usadas pelo main.
 #pragma once
 
 #include <lexer.h>

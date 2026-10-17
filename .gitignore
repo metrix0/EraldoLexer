@@ -1,4 +1,4 @@
-# Arquivos gerados pela compilacao e backups do editor.
+# AULA 7: Ignora objetos, executavel e backups.
 *.o
 /mybc
 *~

@@ -1,9 +1,9 @@
-/* parser.h - Interface da analise e da recuperacao por linha. */
+// AULA 7: Funcoes do parser.
 #pragma once
 #include <stdio.h>
 #include <setjmp.h>
 
-extern FILE *source; /* Entrada definida em main.c. */
+extern FILE *source;
 extern int lookahead;
 extern jmp_buf recovery;
 

@@ -1,7 +1,4 @@
-/*
- * lexer.c - Reconhece identificadores, inteiros e atribuicao.
- * Os reconhecedores devolvem os caracteres que nao pertencem ao token.
- */
+// AULA 7: Le os tokens da entrada.
 #include <stdio.h>
 #include <ctype.h>
 #include <parser.h>
@@ -13,14 +10,14 @@ int tokenline = 1;
 
 char lexeme[MAXSTRLEN+1];
 
-/* Um unico diagnostico por linha; a continuacao e feita pelo main. */
+// AULA 7: Volta ao main depois de avisar o erro.
 void erro(const char *mensagem)
 {
 	fprintf(stderr, "Erro na linha %d: %s\n", tokenline, mensagem);
 	longjmp(recovery, 1);
 }
 
-/* Ignora espacos horizontais; a quebra de linha delimita uma expressao. */
+// AULA 7: Deixa a quebra de linha para o parser.
 void skipspaces(FILE *tape)
 {
 	int c;
@@ -28,7 +25,7 @@ void skipspaces(FILE *tape)
 	if (c != EOF) ungetc(c, tape);
 }
 
-/* ASGN = ':='; dois caracteres formam um unico token. */
+// AULA 7: Reconhece :=.
 int isASGN(FILE *tape)
 {
 	int head = getc(tape);
@@ -41,15 +38,14 @@ int isASGN(FILE *tape)
 	return 0;
 }
 
-/* Reserva o ultimo byte para o terminador do lexema. */
+// AULA 7: Confere o limite do lexema.
 void append(int c, int *i)
 {
-	/* Impede escrita alem do limite do lexema. */
 	if (*i == MAXSTRLEN) erro("token muito longo");
 	lexeme[(*i)++] = c;
 }
 
-// OCT = '0'[0-7]+
+// AULA 7: Octal: zero seguido de digitos de 0 a 7.
 int isOCT(FILE *tape)
 {
 	int prefix = getc(tape);
@@ -72,7 +68,7 @@ int isOCT(FILE *tape)
 	return 0;
 }
 
-// HEX = 0[xX][0-9A-Fa-f]+
+// AULA 7: Hexadecimal: prefixo 0x ou 0X.
 int isHEX(FILE *tape)
 {
 	int prefix = getc(tape);
@@ -92,7 +88,8 @@ int isHEX(FILE *tape)
 				lexeme[i] = 0;
 				return HEX;
 			}
-			/* Preserva o separador para a recuperacao nao pular a proxima linha. */
+
+			// AULA 7: Devolve a quebra de linha para nao pular a seguinte.
 			if (head != EOF) ungetc(head, tape);
 			erro("numero hexadecimal incompleto");
 		}
@@ -102,18 +99,15 @@ int isHEX(FILE *tape)
 	return 0;
 }
 
+// AULA 7: Nome comeca por letra e pode ter numeros.
 int isID(FILE *tape)
 {
-	/* 
-	   ID = [A-Za-z][A-Za-z0-9]*
-	*/
 	int head = getc(tape);
 
 	if (isalpha(head)) {
 		lexeme[0] = head;
 		int i = 1;
 		while (isalnum(head = getc(tape))) {
-			/* Impede escrita alem do limite do lexema. */
 			if (i == MAXSTRLEN) erro("token muito longo");
 			lexeme[i++] = head;
 		}
@@ -126,11 +120,9 @@ int isID(FILE *tape)
 	return 0;
 }
 
+// AULA 7: Numero inteiro decimal.
 int isDEC(FILE *tape)
 {
-	/*
-	  DEC = '0' | [1-9][0-9]*
-	*/
 	int head = getc(tape);
 
 	if (isdigit(head)) {
@@ -142,7 +134,6 @@ int isDEC(FILE *tape)
 
 		int i = 1;
 		while (isdigit(head = getc(tape))) {
-			/* Impede escrita alem do limite do lexema. */
 			if (i == MAXSTRLEN) erro("token muito longo");
 			lexeme[i++] = head;
 		}
@@ -155,7 +146,7 @@ int isDEC(FILE *tape)
 	return 0;
 }
 
-/* A ordem dos reconhecedores distingue octais e hexadecimais de zero. */
+// AULA 7: Tenta cada tipo e devolve o token encontrado.
 int gettoken(FILE *source)
 {
 	int token;
@@ -169,7 +160,6 @@ int gettoken(FILE *source)
 	if ( (token = isHEX(source)) ) return token;
 	if ( (token = isDEC(source)) ) return token;
 
-	/* Operadores e parenteses usam seu proprio codigo de caractere. */
 	token = getc(source);
 	if (token == '\n') line++;
 	return token;

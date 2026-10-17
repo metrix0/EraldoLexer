@@ -1,11 +1,10 @@
-/* vmachine.h - Acumulador e pilha usados na avaliacao das expressoes. */
+// AULA 7: Operacoes da pilha.
 #pragma once
 
 extern double acc;
 
-/* Guarda o operando esquerdo e o recupera ao concluir o direito. */
 void push(void);
 double pop(void);
 
-/* Descarta os resultados temporarios entre expressoes, inclusive apos erro. */
+// AULA 7: Zera o acumulador e esvazia a pilha.
 void resetvm(void);

@@ -1,4 +1,4 @@
-/* symtab.c - Cada nome ocupa a mesma posicao que seu valor na memoria. */
+// AULA 7: Guarda os nomes e valores das variaveis.
 #include <stdio.h>
 #include <string.h>
 #include <lexer.h>
@@ -9,7 +9,7 @@ static double vmem[SYMTABSIZE];
 static char symtab[SYMTABSIZE][MAXSTRLEN+1];
 static int symcount = 0;
 
-/* A busca linear basta para a tabela pequena usada pelo interpretador. */
+// AULA 7: Procura o nome na tabela.
 static int lookup(char *name)
 {
 	int i;

@@ -1,4 +1,4 @@
-/* main.c - Le expressoes da entrada padrao, uma por linha, ate EOF. */
+// AULA 7: Le uma expressao por linha.
 #include <stdio.h>
 #include <main.h>
 #include <lexer.h>
@@ -13,7 +13,7 @@ int main(void)
 	source = stdin;
 
 	for (;;) {
-		/* Um erro abandona a chamada de E, mas nao encerra o interpretador. */
+		// AULA 7: Depois do erro, continua na proxima linha.
 		if (setjmp(recovery)) {
 			status = 1;
 			recover();

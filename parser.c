@@ -1,4 +1,4 @@
-/* parser.c - Reconhece expressoes e executa as acoes de interpretacao. */
+// AULA 7: Analise das expressoes.
 #include <stdio.h>
 #include <stdlib.h>
 #include <ctype.h>
@@ -9,28 +9,24 @@
 #include <symtab.h>
 #include <vmachine.h>
 
-/* Token corrente, consultado antes de cada decisao sintatica. */
 int lookahead;
 
-/* Ponto de retorno instalado pelo main para abandonar somente a linha atual. */
+// AULA 7: Retorno usado quando ocorre um erro.
 jmp_buf recovery;
 
-/*
- * Mantem os niveis de E, T e F no mesmo procedimento: _T inicia um termo
- * e _F inicia um fator. Parenteses e atribuicoes recorrem a E.
- * As marcas numeradas delimitam as acoes semanticas; legenda no README.
- */
+// AULA 7: _T trata os termos e _F trata os fatores.
 void E(void)
 {
 	char name[MAXSTRLEN+1];
-	/* O sinal prefixado vale para o primeiro termo, como na versao anterior. */
+
 	int sigflag = 0;
 	int otimesflg = 0;
 	int oplusflg = 0;
 
 	if (lookahead == '+' || lookahead == '-') {
 		if (lookahead == '-') {
-			/*6*/ sigflag = 1; /*6*/
+			// AULA 7: Acao 6 - guarda o sinal.
+			sigflag = 1;
 		}
 		match(lookahead);
 	}
@@ -39,28 +35,32 @@ void E(void)
   _F:
 	switch (lookahead) {
 	case ID:
-		/*7*/ strcpy(name, lexeme); /*7*/
-		match(ID); /* O token seguinte distingue leitura de atribuicao. */
+		// AULA 7: Acao 7 - salva o nome antes do match.
+		strcpy(name, lexeme);
+		match(ID);
 		if (lookahead == ASGN) {
-			/* A recursao preserva a associatividade direita de ID := E. */
 			match(ASGN);
 			E();
-			/*9*/ store(name, acc); /*9*/
+			// AULA 7: Acao 9 - salva o resultado na variavel.
+			store(name, acc);
 		} else {
-			/* Uso do valor de uma variavel ja definida. */
-			/*8*/ acc = recall(name); /*8*/
+			// AULA 7: Acao 8 - le o valor da variavel.
+			acc = recall(name);
 		}
 		break;
 	case DEC:
-		/*5*/ acc = strtod(lexeme, NULL); /*5*/
+		// AULA 7: Acao 5 - converte o decimal.
+		acc = strtod(lexeme, NULL);
 		match(DEC);
 		break;
 	case OCT:
-		/*5*/ acc = strtol(lexeme, NULL, 8); /*5*/
+		// AULA 7: Acao 5 - converte o octal.
+		acc = strtol(lexeme, NULL, 8);
 		match(OCT);
 		break;
 	case HEX:
-		/*5*/ acc = strtol(lexeme, NULL, 16); /*5*/
+		// AULA 7: Acao 5 - converte o hexadecimal.
+		acc = strtol(lexeme, NULL, 16);
 		match(HEX);
 		break;
 	case '(':
@@ -72,38 +72,33 @@ void E(void)
 		expected("numero, variavel ou '('");
 	}
 
-	/*4*/
+	// AULA 7: Acao 4 - calcula a multiplicacao ou divisao.
 	if (otimesflg) {
 		if (otimesflg == '*') {
 			acc = pop() * acc;
 		} else {
-			/* O operando direito esta em acc; o esquerdo esta na pilha. */
 			if (acc == 0) erro("divisao por zero");
 			acc = pop() / acc;
 		}
 		otimesflg = 0;
 	}
-	/*4*/
 
 	if (lookahead == '*' || lookahead == '/') {
-		/*3*/
+		// AULA 7: Acao 3 - guarda o operando e o operador.
 		push();
 		otimesflg = lookahead;
-		/*3*/
+
 		match(lookahead);
 		goto _F;
 	}
 
-	/* O termo termina antes de resolver a soma ou subtracao pendente. */
-	/*6*/
+	// AULA 7: Acao 6 - aplica o sinal.
 	if (sigflag) {
 		acc = -acc;
 		sigflag = 0;
 	}
 
-	/*6*/
-
-	/*2*/
+	// AULA 7: Acao 2 - calcula a soma ou subtracao.
 	if (oplusflg) {
 		if (oplusflg == '+') {
 			acc = acc + pop();
@@ -112,20 +107,19 @@ void E(void)
 		}
 		oplusflg = 0;
 	}
-	/*2*/
 
 	if (lookahead == '+' || lookahead == '-') {
-		/*1*/
+		// AULA 7: Acao 1 - guarda o operando e o operador.
 		push();
 		oplusflg = lookahead;
-		/*1*/
+
 		match(lookahead);
 		goto _T;
 	}
 
 }
 
-/* Nomes legiveis dos tokens, sem expor os numeros internos do enum. */
+// AULA 7: Usa nomes legiveis nas mensagens.
 static void tokenname(char *text, size_t size)
 {
 	switch (lookahead) {
@@ -143,7 +137,7 @@ static void tokenname(char *text, size_t size)
 	}
 }
 
-/* Informa tanto o que falta quanto o token que impediu a analise. */
+// AULA 7: Mostra o que faltou e o que foi encontrado.
 void expected(const char *description)
 {
 	char found[MAXSTRLEN + 20];
@@ -154,7 +148,7 @@ void expected(const char *description)
 	erro(message);
 }
 
-/* Zera o token antes da leitura: um erro lexico nao deixa lookahead antigo. */
+// AULA 7: Evita reaproveitar o token anterior se a leitura falhar.
 void nexttoken(void)
 {
 	lookahead = 0;
@@ -173,10 +167,7 @@ void match(int required)
 	nexttoken();
 }
 
-/*
- * Recuperacao em modo panico: descarta o restante da linha com erro.
- * Se o lexer ja leu a quebra de linha, a proxima expressao nao e consumida.
- */
+// AULA 7: Pula o resto da linha sem consumir a proxima.
 void recover(void)
 {
 	int c;
