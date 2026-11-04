@@ -1,42 +1,35 @@
-// AULA 7: Guarda os nomes e valores das variaveis.
-#include <stdio.h>
+// <symtab.c>::
 #include <string.h>
 #include <lexer.h>
 #include <symtab.h>
 
-#define SYMTABSIZE 1024
-static double vmem[SYMTABSIZE];
-static char symtab[SYMTABSIZE][MAXSTRLEN+1];
-static int symcount = 0;
+// typedef struct _symtab_ {
+//     char name[MAXSTRLEN+1];
+//     int type;
+//     char offset[MAXSTRLEN+1];
+// } SYMTAB;
 
-// AULA 7: Procura o nome na tabela.
-static int lookup(char *name)
+SYMTAB symtab[SYMTABSIZE];
+int symtab_nextentry = 0;
+
+int symtab_lookup(const char *varname)
 {
-	int i;
-	for (i = 0; i < symcount; i++) {
-		if (strcmp(symtab[i], name) == 0) return i;
-	}
-	return -1;
+    int i;
+    for (i = 0; i < SYMTABSIZE; i++) {
+        if (strcmp(symtab[i].name, varname) == 0) {
+            return i;
+        }
+    }
+    return -1; // varname not found
 }
 
-void store(char *name, double value)
+int symtab_append(const char *varname)
 {
-	int i = lookup(name);
-	if (i == -1) {
-		if (symcount == SYMTABSIZE) erro("tabela de simbolos cheia");
-		i = symcount++;
-		strcpy(symtab[i], name);
-	}
-	vmem[i] = value;
-}
-
-double recall(char *name)
-{
-	int i = lookup(name);
-	if (i == -1) {
-		char mensagem[MAXSTRLEN + 40];
-		snprintf(mensagem, sizeof mensagem, "variavel '%s' nao definida", name);
-		erro(mensagem);
-	}
-	return vmem[i];
+    int found;
+    if (symtab_nextentry < SYMTABSIZE) {
+        strcpy(symtab[found = symtab_nextentry++].name, varname);
+    } else {
+        return -1; // symtab overflow
+    }
+    return found;
 }

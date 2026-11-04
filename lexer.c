@@ -1,166 +1,204 @@
-// AULA 7: Le os tokens da entrada.
 #include <stdio.h>
+#include <stdlib.h>
 #include <ctype.h>
-#include <parser.h>
+#include <string.h>
 #include <tokens.h>
+#include <keywords.h>
 #include <lexer.h>
 
 int line = 1;
-int tokenline = 1;
 
 char lexeme[MAXSTRLEN+1];
 
-// AULA 7: Volta ao main depois de avisar o erro.
-void erro(const char *mensagem)
-{
-	fprintf(stderr, "Erro na linha %d: %s\n", tokenline, mensagem);
-	longjmp(recovery, 1);
-}
-
-// AULA 7: Deixa a quebra de linha para o parser.
-void skipspaces(FILE *tape)
+void skipspaces(FILE *tape) // => skipcomments
 {
 	int c;
-	while ((c = getc(tape)) != '\n' && isspace(c));
-	if (c != EOF) ungetc(c, tape);
+	while(isspace(c = getc(tape)) ) {
+		if (c == '\n') {
+			line++;
+		}
+	}
+	ungetc(c, tape);
 }
 
-// AULA 7: Reconhece :=.
 int isASGN(FILE *tape)
 {
-	int head = getc(tape);
-	if (head == ':') {
-		int next = getc(tape);
-		if (next == '=') return ASGN;
-		if (next != EOF) ungetc(next, tape);
+	if ( (lexeme[0] = getc(tape)) == ':' ) {
+		if ( (lexeme[1] = getc(tape)) == '=' ) {
+			lexeme[2] = 0;
+			return ASGN;
+		}
+		ungetc(lexeme[1], tape);
 	}
-	if (head != EOF) ungetc(head, tape);
+	ungetc(lexeme[0], tape);
 	return 0;
 }
 
-// AULA 7: Confere o limite do lexema.
-void append(int c, int *i)
+int isRELOP(FILE *tape)
 {
-	if (*i == MAXSTRLEN) erro("token muito longo");
+	lexeme[0] = getc(tape);
+	lexeme[1] = getc(tape);
+	lexeme[2] = 0;
+
+	switch(lexeme[0]) {
+		case '<':
+			switch (lexeme[1]) {
+				case '=':
+					return LEQ;
+				case '>':
+					return NEQ;
+				default:
+					ungetc(lexeme[1], tape);
+					lexeme[1] = 0;
+					return '<';
+			}
+		case '>':
+			switch (lexeme[1]) {
+				case '=':
+					return GEQ;
+				default:
+					ungetc(lexeme[1], tape);
+					lexeme[1] = 0;
+					return '>';
+			}
+		case '=':
+			ungetc(lexeme[1], tape);
+			lexeme[1] = 0;
+			return '=';
+	}
+	ungetc(lexeme[1], tape);
+	ungetc(lexeme[0], tape);
+
+	return lexeme[0] = 0;
+}
+
+// Guarda o numero sem converter nem arredondar o lexema.
+static void numchar(int c, int *i)
+{
+	if (*i == MAXSTRLEN) {
+		fprintf(stderr, "number too long at line %d\n", line);
+		exit(EXIT_FAILURE);
+	}
 	lexeme[(*i)++] = c;
 }
 
-// AULA 7: Octal: zero seguido de digitos de 0 a 7.
-int isOCT(FILE *tape)
+// NUM = [0-9]+(\.[0-9]*)?([eE][+-]?[0-9]+)? | \.[0-9]+([eE][+-]?[0-9]+)?
+int isNUM(FILE *tape)
 {
-	int prefix = getc(tape);
-	if (prefix == '0') {
-		int head = getc(tape);
-		if ('0' <= head && head <= '7') {
-			int i = 0;
-			append(prefix, &i);
-			do {
-				append(head, &i);
-				head = getc(tape);
-			} while ('0' <= head && head <= '7');
-			if (head != EOF) ungetc(head, tape);
-			lexeme[i] = 0;
-			return OCT;
-		}
-		if (head != EOF) ungetc(head, tape);
-	}
-	if (prefix != EOF) ungetc(prefix, tape);
-	return 0;
-}
+	int c = getc(tape), i = 0, token = UINT;
 
-// AULA 7: Hexadecimal: prefixo 0x ou 0X.
-int isHEX(FILE *tape)
-{
-	int prefix = getc(tape);
-	if (prefix == '0') {
+	if (!isdigit(c) && c != '.') {
+		if (c != EOF) ungetc(c, tape);
+		lexeme[0] = 0;
+		return 0;
+	}
+	while (isdigit(c)) {
+		numchar(c, &i);
+		c = getc(tape);
+	}
+	if (c == '.') {
 		int next = getc(tape);
-		if (next == 'x' || next == 'X') {
-			int head = getc(tape);
-			if (isxdigit(head)) {
-				int i = 0;
-				append(prefix, &i);
-				append(next, &i);
-				do {
-					append(head, &i);
-					head = getc(tape);
-				} while (isxdigit(head));
-				if (head != EOF) ungetc(head, tape);
-				lexeme[i] = 0;
-				return HEX;
-			}
-
-			// AULA 7: Devolve a quebra de linha para nao pular a seguinte.
-			if (head != EOF) ungetc(head, tape);
-			erro("numero hexadecimal incompleto");
+		if ((!i && !isdigit(next)) || next == '.') {
+			if (next != EOF) ungetc(next, tape);
+			ungetc(c, tape);
+			lexeme[i] = 0;
+			return i ? UINT : 0;
 		}
-		if (next != EOF) ungetc(next, tape);
+		token = FLT;
+		numchar(c, &i);
+		c = next;
+		while (isdigit(c)) {
+			numchar(c, &i);
+			c = getc(tape);
+		}
 	}
-	if (prefix != EOF) ungetc(prefix, tape);
-	return 0;
+	if (c == 'e' || c == 'E') {
+		token = FLT;
+		numchar(c, &i);
+		c = getc(tape);
+		if (c == '+' || c == '-') {
+			numchar(c, &i);
+			c = getc(tape);
+		}
+		if (!isdigit(c)) {
+			fprintf(stderr, "incomplete exponent at line %d\n", line);
+			exit(EXIT_FAILURE);
+		}
+		do {
+			numchar(c, &i);
+			c = getc(tape);
+		} while (isdigit(c));
+	}
+	if (c != EOF) ungetc(c, tape);
+	lexeme[i] = 0;
+	return token;
 }
 
-// AULA 7: Nome comeca por letra e pode ter numeros.
 int isID(FILE *tape)
 {
-	int head = getc(tape);
+	/* 
+	   ID = [A-Za-z][A-Za-z0-9]*
+	*/
 
-	if (isalpha(head)) {
-		lexeme[0] = head;
+	if ( isalpha((lexeme[0] = getc(tape))) ) {
 		int i = 1;
-		while (isalnum(head = getc(tape))) {
-			if (i == MAXSTRLEN) erro("token muito longo");
-			lexeme[i++] = head;
+		while( isalnum(lexeme[i] = getc(tape)) || lexeme[i] == '_' ) {
+			if (i < MAXSTRLEN) {
+				i++;
+			}
 		}
-		if (head != EOF) ungetc(head, tape);
+		ungetc(lexeme[i], tape);
 		lexeme[i] = 0;
+		int token;
+		if ((token = iskeyword(lexeme))) {
+			return token;
+		}
 		return ID;
 	}
 
-	if (head != EOF) ungetc(head, tape);
+	ungetc(lexeme[0], tape);
+	lexeme[0] = 0;
 	return 0;
 }
 
-// AULA 7: Numero inteiro decimal.
-int isDEC(FILE *tape)
+int isUINT(FILE *tape)
 {
-	int head = getc(tape);
+	/*
+	  UINT = '0' | [1-9][0-9]*
+	*/
 
-	if (isdigit(head)) {
-		lexeme[0] = head;
-		if (head == '0') {
+	lexeme[0] = getc(tape);
+
+	if ( isdigit(lexeme[0]) ) {
+		if (lexeme[0] == '0') {
 			lexeme[1] = 0;
-			return DEC;
+			return UINT;
 		}
-
 		int i = 1;
-		while (isdigit(head = getc(tape))) {
-			if (i == MAXSTRLEN) erro("token muito longo");
-			lexeme[i++] = head;
-		}
-		if (head != EOF) ungetc(head, tape);
+		while( isdigit(lexeme[i] = getc(tape)) ) i++;
+		ungetc(lexeme[i], tape);
 		lexeme[i] = 0;
-		return DEC;
+		return UINT;
 	}
 
-	if (head != EOF) ungetc(head, tape);
+	ungetc(lexeme[0], tape);
+
 	return 0;
 }
 
-// AULA 7: Tenta cada tipo e devolve o token encontrado.
 int gettoken(FILE *source)
 {
 	int token;
 
-	skipspaces(source);
-	tokenline = line;
+	skipspaces(source); // -> skipcomments
 
-	if ( (token = isASGN(source)) ) return token;
 	if ( (token = isID(source)) ) return token;
-	if ( (token = isOCT(source)) ) return token;
-	if ( (token = isHEX(source)) ) return token;
-	if ( (token = isDEC(source)) ) return token;
+	if ( (token = isNUM(source)) ) return token;
+	if ( (token = isASGN(source)) ) return token;
+	if ( (token = isRELOP(source)) ) return token;
 
+	// if neither pattern above was satisfied return the current ASCII to be read
 	token = getc(source);
-	if (token == '\n') line++;
+
 	return token;
 }

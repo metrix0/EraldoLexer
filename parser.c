@@ -1,177 +1,313 @@
-// AULA 7: Analise das expressoes.
+// <parser.c>::
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <ctype.h>
 #include <string.h>
 #include <tokens.h>
 #include <lexer.h>
-#include <parser.h>
 #include <symtab.h>
-#include <vmachine.h>
+#include <keywords.h>
+#include <parser.h>
 
-int lookahead;
+// lookahead is the compiler's eye which is traditionally defined here
+int             lookahead;
 
-// AULA 7: Retorno usado quando ocorre um erro.
-jmp_buf recovery;
-
-// AULA 7: _T trata os termos e _F trata os fatores.
-void E(void)
+void program(void) // checked
 {
-	char name[MAXSTRLEN+1];
+	match(PROGRAM);
+	match(ID);
+	match('(');
+	idlist(); // ok
+	match(')');
+	match(';');
+	block();
+	match('.');
+}
 
-	int sigflag = 0;
-	int otimesflg = 0;
-	int oplusflg = 0;
+void idlist(void) // checked
+{
+	// for each string naming variable or function, it must be appended, avoiding duplicates, in the symbol table
+	_IDHEAD:
+	// call symtab_append(const char *varname) before match
+	match(ID);
+	if (lookahead == ',') {
+		match(',');
+		goto _IDHEAD;
+	}
+}
+
+void block(void)
+{
+	if (lookahead == VAR) {
+		match(VAR);
+		_idlist_head:
+			idlist();
+			match(':');
+			type();
+			match(';');
+			if (lookahead == ID) {
+				goto _idlist_head;
+			}
+	}
+	while (lookahead == PROCEDURE || lookahead == FUNCTION) {
+		int funcflg = (lookahead == FUNCTION);
+		match(lookahead);
+		// append subporgram name to the symbol table regarding the specificity of procedure or function
+		match(ID);
+		parmlist();
+		if (funcflg) {
+			match(':');
+			type();
+		}
+		match(';');
+		block();
+		match(';');
+	}
+	match(BEGIN);
+	stmtlist();
+	match(END);
+}
+
+void parmlist(void)
+{
+	if (lookahead == '(') {
+		match('(');
+		_again:
+			if (lookahead == VAR) {
+				match(VAR);
+			}
+			idlist(); // all the symbols declared in this context must have different offsets than declared in block()
+			match(':');
+			type();
+			if (lookahead == ';') {
+				match(';');
+				goto _again;
+			}
+		match(')');
+	}
+}
+
+
+void stmtlist(void)
+{
+	_stmt_head:
+		stmt();
+		if (lookahead == ';') {
+			match(';');
+			goto _stmt_head;
+		}
+}
+
+void arglist(void)
+{
+	if (lookahead == '(') {
+		match('(');
+		_expr_head:
+		expr();
+		if (lookahead == ',') {
+			match(',');
+			goto _expr_head;
+		}
+		match(')');
+	}
+}
+
+int loopcount = 1;
+
+void stmt(void)
+{
+	int lbl1, lbl2;
+	switch(lookahead) {
+		case ID:
+			match(ID);
+			if (lookahead == ASGN) {
+				match(ASGN);
+				expr();
+			} else {
+				arglist();
+			}
+			break;
+		case BEGIN:
+			match(BEGIN); stmtlist(); match(END);
+			break;
+		case IF:
+			match(IF); // if head
+			expr(); // <expr.as>
+			/*[[1]]*/fprintf(output, "\tjz .L%d\n", lbl1 = lbl2 = loopcount++);/*[[1]]*/
+			match(THEN);
+			stmt(); // <stmt.as>
+			if (lookahead == ELSE) {
+				/*[[2]]*/
+				// jmp .endiflabel
+				fprintf(output, "\tjmp .L%d\n", lbl2 = loopcount++);
+				// .elselabel:
+				fprintf(output, ".L%d:\n", lbl1);
+				/*[[2]]*/
+				match(ELSE);
+				stmt(); // <stmt.as>
+			}
+			// .endiflabel:
+			/*[[3]]*/fprintf(output, ".L%d:\n", lbl2);/*[[3]]*/
+			break;
+		case REPEAT:
+			// .replbl:
+			/*[[1]]*/fprintf(output, ".L%d:\n", lbl1 = loopcount++);/*[[1]]*/
+			match(REPEAT);
+			stmtlist();
+			match(UNTIL);
+			expr();
+			// jz .replbl
+			/*[[2]]*/fprintf(output, "\tjz .L%d\n", lbl1);/*[[2]]*/
+			break;
+		case WHILE:
+			// .while:
+			/*[[1]]*/fprintf(output, ".L%d:\n", lbl1 = loopcount++);/*[[1]]*/
+			match(WHILE);
+			expr();
+			// jz .endwhile
+			/*[[2]]*/fprintf(output, "\tjz .L%d\n", lbl2 = loopcount++);/*[[2]]*/
+			match(DO);
+			stmt(); // <stmt.as>
+			// jmp .while
+			/*[[3]]*/fprintf(output, "\tjm .L%d\n", lbl1);/*[[3]]*/
+			// .endwhile:
+			/*[[4]]*/fprintf(output, ".L%d:\n", lbl2);/*[[4]]*/
+			break;
+		default:
+			; // empty statement
+	}
+}
+
+void type(void)
+{
+	switch(lookahead) {
+		case INTEGER:
+			match(INTEGER); break;
+		case REAL:
+			match(REAL); break;
+		case DOUBLE:
+			match(DOUBLE); break;
+		default:
+			match(BOOLEAN);
+	}
+}
+
+int isrelop(void)
+{
+	switch (lookahead) {
+		case '<':
+		case LEQ:
+		case NEQ:
+		case '>':
+		case GEQ:
+		case '=':
+			return lookahead;
+	}
+	return 0;
+}
+void expr(void) // expr types must be numerical or boolean
+{
+	smpexpr();
+	if (isrelop()) {
+		match(lookahead);
+		smpexpr();
+	}
+}
+
+int isotimes(void)
+{
+	if(lookahead == '*' || lookahead == '/' || lookahead == DIV || lookahead == MOD || lookahead == AND)
+		return lookahead;
+	return 0;
+}
+void smpexpr(void)
+{
+	// char name[MAXSTRLEN+1];
 
 	if (lookahead == '+' || lookahead == '-') {
-		if (lookahead == '-') {
-			// AULA 7: Acao 6 - guarda o sinal.
-			sigflag = 1;
-		}
 		match(lookahead);
 	}
 
   _T:
+
   _F:
+
 	switch (lookahead) {
 	case ID:
-		// AULA 7: Acao 7 - salva o nome antes do match.
-		strcpy(name, lexeme);
-		match(ID);
+		match(ID); // ID is associated to a R-value or L-value variable
 		if (lookahead == ASGN) {
+			// ID := E -> L-value
 			match(ASGN);
-			E();
-			// AULA 7: Acao 9 - salva o resultado na variavel.
-			store(name, acc);
+			expr();
 		} else {
-			// AULA 7: Acao 8 - le o valor da variavel.
-			acc = recall(name);
+			// R-value
 		}
 		break;
-	case DEC:
-		// AULA 7: Acao 5 - converte o decimal.
-		acc = strtod(lexeme, NULL);
-		match(DEC);
+	case FLT:
+		match(FLT);
 		break;
-	case OCT:
-		// AULA 7: Acao 5 - converte o octal.
-		acc = strtol(lexeme, NULL, 8);
-		match(OCT);
-		break;
-	case HEX:
-		// AULA 7: Acao 5 - converte o hexadecimal.
-		acc = strtol(lexeme, NULL, 16);
-		match(HEX);
-		break;
-	case '(':
-		match('(');
-		E();
-		match(')');
+	case UINT:
+		match(UINT);
 		break;
 	default:
-		expected("numero, variavel ou '('");
+		match('(');
+		expr();
+		match(')');
 	}
 
-	// AULA 7: Acao 4 - calcula a multiplicacao ou divisao.
-	if (otimesflg) {
-		if (otimesflg == '*') {
-			acc = pop() * acc;
-		} else {
-			if (acc == 0) erro("divisao por zero");
-			acc = pop() / acc;
-		}
-		otimesflg = 0;
-	}
-
-	if (lookahead == '*' || lookahead == '/') {
-		// AULA 7: Acao 3 - guarda o operando e o operador.
-		push();
-		otimesflg = lookahead;
-
+	if (isotimes()) {
 		match(lookahead);
 		goto _F;
 	}
 
-	// AULA 7: Acao 6 - aplica o sinal.
-	if (sigflag) {
-		acc = -acc;
-		sigflag = 0;
-	}
-
-	// AULA 7: Acao 2 - calcula a soma ou subtracao.
-	if (oplusflg) {
-		if (oplusflg == '+') {
-			acc = acc + pop();
-		} else {
-			acc = pop() - acc;
-		}
-		oplusflg = 0;
-	}
+	// term ends here
 
 	if (lookahead == '+' || lookahead == '-') {
-		// AULA 7: Acao 1 - guarda o operando e o operador.
-		push();
-		oplusflg = lookahead;
-
 		match(lookahead);
 		goto _T;
 	}
 
 }
 
-// AULA 7: Usa nomes legiveis nas mensagens.
-static void tokenname(char *text, size_t size)
-{
-	switch (lookahead) {
-	case EOF: snprintf(text, size, "fim da entrada"); break;
-	case '\n': snprintf(text, size, "fim da linha"); break;
-	case ID: snprintf(text, size, "variavel '%s'", lexeme); break;
-	case DEC: case OCT: case HEX:
-		snprintf(text, size, "numero '%s'", lexeme); break;
-	case ASGN: snprintf(text, size, "':='"); break;
-	default:
-		if (lookahead >= 0 && lookahead <= 255 && isprint(lookahead))
-			snprintf(text, size, "'%c'", lookahead);
-		else
-			snprintf(text, size, "caractere de codigo %d", lookahead);
-	}
-}
-
-// AULA 7: Mostra o que faltou e o que foi encontrado.
-void expected(const char *description)
-{
-	char found[MAXSTRLEN + 20];
-	char message[MAXSTRLEN + 120];
-	tokenname(found, sizeof found);
-	snprintf(message, sizeof message, "esperado %s; encontrado %s",
-			description, found);
-	erro(message);
-}
-
-// AULA 7: Evita reaproveitar o token anterior se a leitura falhar.
-void nexttoken(void)
-{
-	lookahead = 0;
-	lookahead = gettoken(source);
-}
-
 void match(int required)
 {
-	if (lookahead != required) {
-		char description[32];
-		if (required == EOF) strcpy(description, "fim da entrada");
-		else if (required == '\n') strcpy(description, "fim da linha");
-		else snprintf(description, sizeof description, "'%c'", required);
-		expected(description);
+	if (lookahead == required) {
+		lookahead = gettoken(source);
+	} else {
+		if (isprint(lookahead)) {
+			fprintf(stderr,
+					"token mismatch: %c while expected %c\nexiting with err\n",
+					lookahead, required);
+		} else {
+			if (lookahead == EOF) {
+				fprintf(stderr, "premature EOF seen at line %d\n", line);
+			} else {
+				if (isprint(lookahead)) {
+					fprintf(stderr,
+							"token mismatch: %c while expected %c at line %d\nexiting with err\n",
+							lookahead, required, line);
+				} else {
+					fprintf(stderr,
+							"token mismatch: %d while expected %d at line %d\nexiting with err\n",
+							lookahead, required, line);
+				}
+			}
+		}
+		exit(-2);
 	}
-	nexttoken();
 }
 
-// AULA 7: Pula o resto da linha sem consumir a proxima.
-void recover(void)
+int isFIRST(void)
 {
-	int c;
-	if (lookahead == '\n' || lookahead == EOF) return;
-	while ((c = getc(source)) != EOF && c != '\n');
-	if (c == '\n') line++;
+	switch (lookahead) {
+		case '+':
+		case '-':
+		case ID:
+		case FLT:
+		case UINT:
+		case '(':
+			return lookahead;
+	}
+	return 0;
 }

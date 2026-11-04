@@ -1,0 +1,4 @@
+# AULA 7: Ignora objetos, executavel e backups.
+*.o
+/mybc
+*~
